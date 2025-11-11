@@ -1,0 +1,5 @@
+{
+  "name": "Kalkulator Rata-rata BBM",
+  "description": "A simple web app to calculate average fuel consumption (km/l) using the 'fill-up to fill-up' method. Data is stored locally in your browser.",
+  "requestFramePermissions": []
+}
