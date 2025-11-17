@@ -13,26 +13,36 @@ interface SummaryData {
 
 const Summary: React.FC<SummaryProps> = ({ processedEntries }) => {
   const summary: SummaryData | null = React.useMemo(() => {
-    if (processedEntries.length < 2) {
+    const fullTankEntries = processedEntries.filter(entry => entry.isFullTank);
+    
+    if (fullTankEntries.length < 2) {
       return null;
     }
 
-    const calculableEntries = processedEntries.slice(1);
-    
-    const totalDistance = calculableEntries.reduce((sum, entry) => sum + (entry.distance || 0), 0);
-    const totalLiters = calculableEntries.reduce((sum, entry) => sum + entry.liters, 0);
+    const firstFullEntry = fullTankEntries[0];
+    const lastFullEntry = fullTankEntries[fullTankEntries.length - 1];
+
+    const firstFullEntryIndexInAll = processedEntries.findIndex(e => e.id === firstFullEntry.id);
+    const lastFullEntryIndexInAll = processedEntries.findIndex(e => e.id === lastFullEntry.id);
+
+    const totalDistance = lastFullEntry.odometer - firstFullEntry.odometer;
+
+    // Sum of liters from the entry AFTER the first full one up to the last full one.
+    const totalLiters = processedEntries
+      .slice(firstFullEntryIndexInAll + 1, lastFullEntryIndexInAll + 1)
+      .reduce((sum, entry) => sum + entry.liters, 0);
 
     return {
       totalDistance,
       totalLiters,
-      overallKmPerLiter: totalLiters > 0 ? totalDistance / totalLiters : 0,
+      overallKmPerLiter: totalLiters > 0 && totalDistance > 0 ? totalDistance / totalLiters : 0,
     };
   }, [processedEntries]);
 
   if (!summary) {
     return (
         <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 text-center">
-            <p className="text-slate-400">Masukkan setidaknya dua data pengisian untuk melihat ringkasan.</p>
+            <p className="text-slate-400">Masukkan setidaknya dua data 'Isi Penuh' untuk melihat ringkasan.</p>
         </div>
     );
   }

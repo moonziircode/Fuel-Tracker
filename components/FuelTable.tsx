@@ -25,6 +25,7 @@ const FuelTable: React.FC<FuelTableProps> = ({ processedEntries, onEditEntry, on
           <thead className="text-xs text-slate-400 uppercase bg-slate-900/50">
             <tr>
               <th scope="col" className="px-4 py-3">Tanggal</th>
+              <th scope="col" className="px-4 py-3">Tipe</th>
               <th scope="col" className="px-4 py-3 text-right">Odometer (km)</th>
               <th scope="col" className="px-4 py-3 text-right">Liter (L)</th>
               <th scope="col" className="px-4 py-3 text-right">Jarak (km)</th>
@@ -36,6 +37,13 @@ const FuelTable: React.FC<FuelTableProps> = ({ processedEntries, onEditEntry, on
             {processedEntries.map((entry) => (
               <tr key={entry.id} className="border-b border-slate-700 last:border-b-0 hover:bg-slate-700/50">
                 <td className="px-4 py-3 font-medium text-slate-200 whitespace-nowrap">{entry.date}</td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  {entry.isFullTank ? (
+                    <span className="bg-sky-900/50 text-sky-300 text-xs font-medium px-2.5 py-0.5 rounded-full">Penuh</span>
+                  ) : (
+                    <span className="bg-slate-700 text-slate-400 text-xs font-medium px-2.5 py-0.5 rounded-full">Parsial</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-right">{entry.odometer.toLocaleString('id-ID')}</td>
                 <td className="px-4 py-3 text-right">{entry.liters.toFixed(2)}</td>
                 <td className="px-4 py-3 text-right">

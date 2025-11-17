@@ -9,7 +9,13 @@ const App: React.FC = () => {
   const [entries, setEntries] = useState<FuelEntry[]>(() => {
     try {
       const savedEntries = localStorage.getItem('fuelEntries');
-      return savedEntries ? JSON.parse(savedEntries) : [];
+      if (!savedEntries) return [];
+      const parsedEntries = JSON.parse(savedEntries);
+      // For backward compatibility, add isFullTank if it's missing, default to true
+      return parsedEntries.map((entry: any) => ({
+        ...entry,
+        isFullTank: entry.isFullTank !== undefined ? entry.isFullTank : true,
+      }));
     } catch (error) {
       console.error('Error reading from localStorage', error);
       return [];
@@ -26,21 +32,22 @@ const App: React.FC = () => {
     }
   }, [entries]);
 
-  const handleAddEntry = (date: string, odometer: number, liters: number) => {
+  const handleAddEntry = (date: string, odometer: number, liters: number, isFullTank: boolean) => {
     const newEntry: FuelEntry = {
       id: new Date().toISOString() + Math.random(), // Add random number to ensure uniqueness
       date,
       odometer,
       liters,
+      isFullTank,
     };
     const updatedEntries = [...entries, newEntry].sort((a, b) => a.odometer - b.odometer);
     setEntries(updatedEntries);
   };
   
-  const handleUpdateEntry = (id: string, date: string, odometer: number, liters: number) => {
+  const handleUpdateEntry = (id: string, date: string, odometer: number, liters: number, isFullTank: boolean) => {
     setEntries(prevEntries =>
       prevEntries
-        .map(entry => (entry.id === id ? { id, date, odometer, liters } : entry))
+        .map(entry => (entry.id === id ? { id, date, odometer, liters, isFullTank } : entry))
         .sort((a, b) => a.odometer - b.odometer)
     );
     setEditingEntry(null);
@@ -75,26 +82,56 @@ const App: React.FC = () => {
   };
 
   const processedEntries: ProcessedFuelEntry[] = useMemo(() => {
-    return entries.map((current, index, arr) => {
-      if (index === 0) {
-        return { ...current, distance: null, kmPerLiter: null };
-      }
-      const previous = arr[index - 1];
-      const distance = current.odometer - previous.odometer;
-      const kmPerLiter = distance > 0 && current.liters > 0 ? distance / current.liters : 0;
-
-      return {
+    const sortedEntries = [...entries].sort((a, b) => a.odometer - b.odometer);
+    
+    return sortedEntries.map((current, index, arr) => {
+      const processedEntry: ProcessedFuelEntry = {
         ...current,
-        distance,
-        kmPerLiter,
+        distance: null,
+        kmPerLiter: null,
       };
+
+      // Calculate distance since last fill-up (full or partial)
+      if (index > 0) {
+        const previous = arr[index - 1];
+        processedEntry.distance = current.odometer - previous.odometer;
+      }
+
+      // Calculate km/L only for full tanks, based on the previous full tank
+      if (current.isFullTank) {
+        // Find the index of the previous full tank entry
+        // FIX: Property 'findLastIndex' does not exist on type 'any[]'. Replaced with a manual loop for compatibility.
+        let previousFullTankIndex = -1;
+        for (let i = index - 1; i >= 0; i--) {
+          if (arr[i].isFullTank) {
+            previousFullTankIndex = i;
+            break;
+          }
+        }
+
+        if (previousFullTankIndex !== -1) {
+          const previousFullTankEntry = arr[previousFullTankIndex];
+          const distanceBetweenFullTanks = current.odometer - previousFullTankEntry.odometer;
+          
+          // Sum liters of all entries AFTER the previous full tank, up to and including the current one.
+          const litersSum = arr
+            .slice(previousFullTankIndex + 1, index + 1)
+            .reduce((total, entry) => total + entry.liters, 0);
+
+          if (litersSum > 0 && distanceBetweenFullTanks > 0) {
+            processedEntry.kmPerLiter = distanceBetweenFullTanks / litersSum;
+          }
+        }
+      }
+
+      return processedEntry;
     });
   }, [entries]);
   
   const lastOdometer = useMemo(() => {
       if(entries.length === 0) return 0;
-      const sortedEntries = [...entries].sort((a,b) => a.odometer - b.odometer);
-      return sortedEntries[sortedEntries.length - 1].odometer;
+      // relies on entries being sorted on update, which they are.
+      return entries[entries.length - 1].odometer;
   }, [entries]);
 
   return (
@@ -103,7 +140,7 @@ const App: React.FC = () => {
         <h1 className="text-3xl md:text-4xl font-bold text-slate-100 tracking-tight">
           Kalkulator Rata-rata BBM
         </h1>
-        <p className="text-slate-400 mt-2">(Metode Isi Bensin ke Isi Bensin)</p>
+        <p className="text-slate-400 mt-2">(Metode 'Isi Penuh', dengan dukungan isian parsial)</p>
       </header>
       
       <main className="space-y-8">

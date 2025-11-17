@@ -4,6 +4,7 @@ export interface FuelEntry {
   date: string;
   odometer: number;
   liters: number;
+  isFullTank: boolean;
 }
 
 export interface ProcessedFuelEntry extends FuelEntry {

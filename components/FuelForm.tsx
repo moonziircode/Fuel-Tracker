@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { FuelEntry } from '../types';
 
 interface FuelFormProps {
-  onAddEntry: (date: string, odometer: number, liters: number) => void;
-  onUpdateEntry: (id: string, date: string, odometer: number, liters: number) => void;
+  onAddEntry: (date: string, odometer: number, liters: number, isFullTank: boolean) => void;
+  onUpdateEntry: (id: string, date: string, odometer: number, liters: number, isFullTank: boolean) => void;
   onCancelEdit: () => void;
   editingEntry: FuelEntry | null;
   lastOdometer: number;
@@ -19,6 +19,7 @@ const FuelForm: React.FC<FuelFormProps> = ({
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [odometer, setOdometer] = useState('');
   const [liters, setLiters] = useState('');
+  const [isFullTank, setIsFullTank] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -26,12 +27,14 @@ const FuelForm: React.FC<FuelFormProps> = ({
       setDate(editingEntry.date);
       setOdometer(String(editingEntry.odometer));
       setLiters(String(editingEntry.liters));
+      setIsFullTank(editingEntry.isFullTank);
       setError('');
     } else {
       // Reset form when not editing or after cancelling/updating
       setDate(new Date().toISOString().split('T')[0]);
       setOdometer('');
       setLiters('');
+      setIsFullTank(true);
       setError('');
     }
   }, [editingEntry]);
@@ -47,16 +50,17 @@ const FuelForm: React.FC<FuelFormProps> = ({
     }
     
     if (editingEntry) {
-      onUpdateEntry(editingEntry.id, date, odoNum, litersNum);
+      onUpdateEntry(editingEntry.id, date, odoNum, litersNum, isFullTank);
     } else {
       if (odoNum <= lastOdometer) {
         setError(`Odometer harus lebih besar dari pengisian terakhir (${lastOdometer} km).`);
         return;
       }
-      onAddEntry(date, odoNum, litersNum);
+      onAddEntry(date, odoNum, litersNum, isFullTank);
       // Only reset these for new entries, date can stay
       setOdometer('');
       setLiters('');
+      setIsFullTank(true);
       setError('');
     }
   };
@@ -111,6 +115,23 @@ const FuelForm: React.FC<FuelFormProps> = ({
             step="0.01"
             className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
           />
+        </div>
+        <div className="pt-1">
+          <div className="flex items-center">
+            <input
+              id="isFullTank"
+              type="checkbox"
+              checked={isFullTank}
+              onChange={(e) => setIsFullTank(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-500 bg-slate-700 text-sky-600 focus:ring-sky-500"
+            />
+            <label htmlFor="isFullTank" className="ml-2 block text-sm text-slate-300">
+              Isi Penuh (Full Tank)
+            </label>
+          </div>
+          <p className="text-xs text-slate-500 mt-2">
+            Centang jika mengisi tangki sampai penuh. Konsumsi BBM dihitung antar isian penuh.
+          </p>
         </div>
         {error && <p className="text-sm text-red-400">{error}</p>}
         <div className="flex flex-col sm:flex-row gap-2 pt-2">
